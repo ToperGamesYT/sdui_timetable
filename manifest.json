@@ -1,0 +1,10 @@
+{
+  "domain": "sdui_timetable",
+  "name": "SDUI Timetable",
+  "documentation": "https://github.com/ToperGamesYT/sdui_timetable",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@ToperGamesYT"],
+  "version": "1.0.0",
+  "iot_class": "cloud_polling"
+}
