@@ -1,14 +1,23 @@
-# SDUI Timetable for Home Assistant
+# SDUI Timetable
 
-Кастомная интеграция для Home Assistant, показывающая расписание SDUI.
+A custom Home Assistant integration to display your school timetable from SDUI.
 
-## Установка через HACS
-1. Открой HACS → Custom repositories → Добавь `https://github.com/ToperGamesYT/sdui_timetable` как **Integration**.
-2. Установи интеграцию.
-3. Добавь в `configuration.yaml`:
+## Features
+- Shows the number of lessons for today
+- Displays the first lesson with time, subject, and status
+- Filters out cancelled lessons
+- Updates automatically every hour
+
+## Installation via HACS
+1. Open **HACS → Integrations → Custom repositories**.
+2. Add  
+   `https://github.com/topergamesyt/sdui_timetable`  
+   and select **Integration**.
+3. Install the integration.
+4. Add the following to your `configuration.yaml`:
 
 ```yaml
 sensor:
   - platform: sdui_timetable
-    user_id: "2349208"
-    token: "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+    user_id: "your_user_id"
+    token: "your_token"
