@@ -19,6 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 
 API_URL = "https://api.sdui.app/v1/timetables/users/{}/timetable?begins_at={}&ends_at={}"
 
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
@@ -45,8 +46,6 @@ class SduiTimetableSensor(SensorEntity):
         self._token = token
         self._attr_state = None
         self._attr_extra_state_attributes = {}
-        # The unique ID is crucial for Home Assistant to identify the entity
-        # This allows for UI configuration and consistent entity behavior
         self._attr_unique_id = f"sdui_timetable_{user_id}"
 
     async def async_update(self) -> None:
@@ -59,7 +58,7 @@ class SduiTimetableSensor(SensorEntity):
         try:
             async with async_timeout.timeout(15):
                 async with session.get(url, headers=headers) as resp:
-                    resp.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+                    resp.raise_for_status()
                     data = await resp.json()
         except aiohttp.ClientError as err:
             _LOGGER.error("Error fetching data from SDUI API: %s", err)
@@ -75,19 +74,23 @@ class SduiTimetableSensor(SensorEntity):
             return
 
         lessons = data.get("data", {}).get("lessons", [])
-        active_lessons = [lesson for lesson in lessons if lesson.get("kind") != "CANCELED"]
+
+        # Фильтруем отменённые уроки (CANCELED/CANCLED)
+        active_lessons = [
+            lesson for lesson in lessons
+            if (lesson.get("kind") or "").upper() not in ("CANCELED", "CANCLED")
+        ]
 
         if not active_lessons:
             self._attr_state = "No lessons today"
             self._attr_extra_state_attributes = {"lessons": []}
             return
 
-        self._attr_state = f"{len(active_lessons)} lessons today"
-        
-        # Sort lessons by start time
+        # Сортируем активные уроки по времени начала
         sorted_lessons = sorted(active_lessons, key=lambda l: l.get("begins_at", 0))
         first_lesson = sorted_lessons[0]
 
+        # Формируем список уроков для атрибутов
         lesson_list = [
             {
                 "time": datetime.datetime.fromtimestamp(l.get("begins_at", 0)).strftime("%H:%M"),
@@ -97,8 +100,14 @@ class SduiTimetableSensor(SensorEntity):
             for l in sorted_lessons
         ]
 
+        # Основное состояние: количество уроков
+        self._attr_state = f"{len(sorted_lessons)} lessons today"
+
+        # Атрибуты с информацией о первом уроке и списке
         self._attr_extra_state_attributes = {
-            "first_lesson_time": datetime.datetime.fromtimestamp(first_lesson.get("begins_at", 0)).strftime("%H:%M"),
+            "first_lesson_time": datetime.datetime.fromtimestamp(
+                first_lesson.get("begins_at", 0)
+            ).strftime("%H:%M"),
             "first_lesson_subject": first_lesson.get("course", {}).get("meta", {}).get("displayname", "Unknown"),
             "first_lesson_status": first_lesson.get("meta", {}).get("displayname_kind", "Planned"),
             "lessons": lesson_list,
