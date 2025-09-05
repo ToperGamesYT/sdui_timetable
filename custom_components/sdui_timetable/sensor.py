@@ -45,6 +45,9 @@ class SduiTimetableSensor(SensorEntity):
         self._token = token
         self._attr_state = None
         self._attr_extra_state_attributes = {}
+        # The unique ID is crucial for Home Assistant to identify the entity
+        # This allows for UI configuration and consistent entity behavior
+        self._attr_unique_id = f"sdui_timetable_{user_id}"
 
     async def async_update(self) -> None:
         """Fetch new state data for the sensor."""
