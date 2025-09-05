@@ -53,18 +53,18 @@ class SduiTimetableSensor(SensorEntity):
         lessons = data.get("data", {}).get("lessons", [])
         active_lessons = [l for l in lessons if l.get("kind") != "CANCLED"]
 
-        self._attr_state = f"{len(active_lessons)} уроков" if active_lessons else "Нет уроков"
+        self._attr_state = f"{len(active_lessons)} lessons" if active_lessons else "No lessons today."
         if active_lessons:
             first = sorted(active_lessons, key=lambda l: l["begins_at"])[0]
             self._attr_extra_state_attributes = {
                 "first_lesson_time": datetime.datetime.fromtimestamp(first["begins_at"]).strftime("%H:%M"),
                 "first_lesson_subject": first["course"]["meta"]["displayname"],
-                "first_lesson_status": first["meta"].get("displayname_kind") or "Планово",
+                "first_lesson_status": first["meta"].get("displayname_kind") or "Plan",
                 "lessons": [
                     {
                         "time": datetime.datetime.fromtimestamp(l["begins_at"]).strftime("%H:%M"),
                         "subject": l["course"]["meta"]["displayname"],
-                        "status": l["meta"].get("displayname_kind") or "Планово"
+                        "status": l["meta"].get("displayname_kind") or "Plan"
                     }
                     for l in active_lessons
                 ]
