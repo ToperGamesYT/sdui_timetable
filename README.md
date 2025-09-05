@@ -3,6 +3,7 @@
 
 # SDUI Timetable
 ![Logo](/assets/logo.png)
+
 A custom Home Assistant integration to display your school timetable from SDUI.
 
 ## Features
