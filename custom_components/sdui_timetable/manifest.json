@@ -1,12 +1,12 @@
 {
   "domain": "sdui_timetable",
   "name": "SDUI Timetable",
-  "version": "1.0.2.7",
+  "version": "1.0.2.8",
   "documentation": "https://github.com/ToperGamesYT/sdui_timetable",
   "issue_tracker": "https://github.com/ToperGamesYT/sdui_timetable/issues",
   "requirements": [],
   "codeowners": ["@ToperGamesYT"],
   "iot_class": "cloud_polling",
-  "config_flow": true,
-  "logo": "assets/logo.png"
+  "config_flow": true
+
 }
