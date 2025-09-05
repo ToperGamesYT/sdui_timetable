@@ -5,28 +5,28 @@ import async_timeout
 import datetime
 import voluptuous as vol
 from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import HomeAssistantType, ConfigType
 
+from .const import DOMAIN
+
 CONF_USER_ID = "user_id"
 CONF_TOKEN = "token"
 
-PLATFORM_SCHEMA = cv.PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_USER_ID): cv.string,
-    vol.Required(CONF_TOKEN): cv.string,
-    vol.Optional(CONF_NAME, default="SDUI Timetable"): cv.string,
-})
-
 API_URL = "https://api.sdui.app/v1/timetables/users/{}/timetable?begins_at={}&ends_at={}"
 
-async def async_setup_platform(hass: HomeAssistantType, config: ConfigType, async_add_entities: AddEntitiesCallback, discovery_info=None):
-    user_id = config[CONF_USER_ID]
-    token = config[CONF_TOKEN]
-    name = config[CONF_NAME]
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+    """Set up the SduiTimetable sensor."""
+    user_id = entry.data[CONF_USER_ID]
+    token = entry.data[CONF_TOKEN]
+    name = entry.title
     async_add_entities([SduiTimetableSensor(name, user_id, token)], True)
+
 
 class SduiTimetableSensor(SensorEntity):
     def __init__(self, name, user_id, token):
