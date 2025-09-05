@@ -1,0 +1,1 @@
+DOMAIN = "sdui_timetable"
