@@ -25,3 +25,16 @@ sensor:
   - platform: sdui_timetable
     user_id: "your_user_id"
     token: "your_token"
+```
+5. Find your user id in your links to your timetable in the SDUI app.
+
+https:// sdui.app/timetable/users/**your_user_id**?viewType=week&daysToShow=5&startDate=2025-09-01
+
+6. Find your token in your browser.
+![1](/assets/1.png)
+
+![2](/assets/2.png)
+
+![3](/assets/3.png)
+
+![4](/assets/4.png)
