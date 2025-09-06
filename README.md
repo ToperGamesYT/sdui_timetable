@@ -31,6 +31,7 @@ sensor:
 https:// sdui.app/timetable/users/**your_user_id**?viewType=week&daysToShow=5&startDate=2025-09-01
 
 6. Find your token in your browser.
+
 ![1](/assets/1.png)
 
 ![2](/assets/2.png)
