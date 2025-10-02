@@ -17,7 +17,7 @@ from homeassistant.const import STATE_UNAVAILABLE
 
 _LOGGER = logging.getLogger(__name__)
 
-API_URL = "https://api.sdui.app/v1/timetables/users/{}/timetable?begins_at={}&ends_at={}"
+API_URL = "https://api.sdui.app/v1/timetables/users/{}/timetable?begins_at=2025-09-26&ends_at=2025-09-26"
 
 
 async def async_setup_entry(
