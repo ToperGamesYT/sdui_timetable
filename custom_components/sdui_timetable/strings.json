@@ -1,0 +1,35 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Sdui Setup",
+                "description": "Enter your Sdui Bearer token. You can find it in your browser's developer tools (Network tab) when logged into sdui.app.",
+                "data": {
+                    "token": "Bearer Token"
+                }
+            }
+        },
+        "error": {
+            "invalid_auth": "Invalid or expired token. Please provide a fresh Bearer token.",
+            "cannot_connect": "Could not connect to the Sdui API. Check your internet connection.",
+            "unknown": "Unexpected error. Check the Home Assistant logs."
+        },
+        "abort": {
+            "already_configured": "This Sdui account is already configured."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Sdui Options",
+                "data": {
+                    "token": "Bearer Token"
+                }
+            }
+        },
+        "error": {
+            "invalid_auth": "Invalid or expired token. Please provide a fresh Bearer token.",
+            "cannot_connect": "Could not connect to the Sdui API."
+        }
+    }
+}

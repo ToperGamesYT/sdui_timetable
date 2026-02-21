@@ -7,6 +7,7 @@
 A custom Home Assistant integration to display your school timetable from SDUI.
 
 ## Features
+- Calendar mode
 - Shows the number of lessons for today
 - Displays the first lesson with time, subject, and status
 - Filters out cancelled lessons

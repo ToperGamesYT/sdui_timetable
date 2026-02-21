@@ -1,23 +1,15 @@
-"""SDUI Timetable sensors."""
+"""Sensor platform for Sdui."""
 from __future__ import annotations
 
-import datetime
-import logging
-from typing import Any
-
-import aiohttp
-import async_timeout
-
+from datetime import datetime
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.const import STATE_UNAVAILABLE
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-_LOGGER = logging.getLogger(__name__)
-
-API_URL = "https://api.sdui.app/v1/timetables/users/{}/timetable?begins_at={}&ends_at={}"
+from .const import DOMAIN
+from .coordinator import SduiCoordinator
 
 
 async def async_setup_entry(
@@ -25,90 +17,120 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the SduiTimetable sensor from a config entry."""
-    user_id = entry.data["user_id"]
-    token = entry.data["token"]
-    name = entry.title
+    """Set up Sdui sensors from config entry."""
+    coordinator: SduiCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    async_add_entities([SduiTimetableSensor(name, user_id, token)], True)
-
-
-class SduiTimetableSensor(SensorEntity):
-    """Representation of an Sdui Timetable sensor."""
-
-    _attr_has_entity_name = True
-    _attr_icon = "mdi:calendar-clock"
-
-    def __init__(self, name: str, user_id: str, token: str) -> None:
-        """Initialize the sensor."""
-        self._attr_name = name
-        self._user_id = user_id
-        self._token = token
-        self._attr_state = None
-        self._attr_extra_state_attributes = {}
-        self._attr_unique_id = f"sdui_timetable_{user_id}"
-
-    async def async_update(self) -> None:
-        """Fetch new state data for the sensor."""
-        today = datetime.date.today().strftime("%Y-%m-%d")
-        url = API_URL.format(self._user_id, today, today)
-        headers = {"Authorization": f"Bearer {self._token}", "Accept": "application/json"}
-        session = async_get_clientsession(self.hass)
-
-        try:
-            async with async_timeout.timeout(15):
-                async with session.get(url, headers=headers) as resp:
-                    resp.raise_for_status()
-                    data = await resp.json()
-        except aiohttp.ClientError as err:
-            _LOGGER.error("Error fetching data from SDUI API: %s", err)
-            self._attr_state = STATE_UNAVAILABLE
-            return
-        except TimeoutError:
-            _LOGGER.error("Timeout fetching data from SDUI API")
-            self._attr_state = STATE_UNAVAILABLE
-            return
-        except Exception as err:
-            _LOGGER.error("Unexpected error occurred: %s", err)
-            self._attr_state = STATE_UNAVAILABLE
-            return
-
-        lessons = data.get("data", {}).get("lessons", [])
-
-        # Фильтруем отменённые уроки (CANCELED/CANCLED)
-        active_lessons = [
-            lesson for lesson in lessons
-            if (lesson.get("kind") or "").upper() not in ("CANCELED", "CANCLED")
+    async_add_entities(
+        [
+            SduiNextLessonSensor(coordinator, entry),
+            SduiTodayLessonsSensor(coordinator, entry),
+            SduiSubstitutionsSensor(coordinator, entry),
         ]
+    )
 
-        if not active_lessons:
-            self._attr_state = "No lessons today"
-            self._attr_extra_state_attributes = {"lessons": []}
-            return
 
-        # Сортируем активные уроки по времени начала
-        sorted_lessons = sorted(active_lessons, key=lambda l: l.get("begins_at", 0))
-        first_lesson = sorted_lessons[0]
+def _format_time(ts: int | None) -> str | None:
+    """Format a Unix timestamp to HH:MM local time."""
+    if ts is None:
+        return None
+    return datetime.fromtimestamp(ts).strftime("%H:%M")
 
-        # Формируем список уроков для атрибутов
-        lesson_list = [
-            {
-                "time": datetime.datetime.fromtimestamp(l.get("begins_at", 0)).strftime("%H:%M"),
-                "subject": l.get("course", {}).get("meta", {}).get("displayname", "Unknown"),
-                "status": l.get("meta", {}).get("displayname_kind", "Planned"),
-            }
-            for l in sorted_lessons
-        ]
 
-        # Основное состояние: количество уроков
-        self._attr_state = f"{len(sorted_lessons)} lessons today"
+def _lesson_to_attr(lesson: dict) -> dict:
+    """Convert a lesson dict to a simplified attribute dict."""
+    return {
+        "subject": lesson.get("subject"),
+        "shortname": lesson.get("shortname"),
+        "teachers": lesson.get("teachers", []),
+        "rooms": lesson.get("rooms", []),
+        "grades": lesson.get("grades", []),
+        "hour": lesson.get("hour"),
+        "kind": lesson.get("kind"),
+        "kind_label": lesson.get("displayname_kind"),
+        "comment": lesson.get("comment"),
+        "start": _format_time(lesson.get("begins_at")),
+        "end": _format_time(lesson.get("ends_at")),
+    }
 
-        # Атрибуты с информацией о первом уроке и списке
-        self._attr_extra_state_attributes = {
-            "first_lesson_time": datetime.datetime.fromtimestamp(
-                first_lesson.get("begins_at", 0)
-            ).strftime("%H:%M"),
-            "first_lesson_subject": first_lesson.get("course", {}).get("meta", {}).get("displayname", "Unknown"),
-            "first_lesson_status": first_lesson.get("meta", {}).get("displayname_kind", "Planned"),
-            "lessons": lesson_list,
+
+class SduiNextLessonSensor(CoordinatorEntity, SensorEntity):
+    """Sensor: next upcoming lesson."""
+
+    _attr_icon = "mdi:school"
+
+    def __init__(self, coordinator: SduiCoordinator, entry: ConfigEntry) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_next_lesson"
+        self._attr_name = "Sdui Next Lesson"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return subject name of the next lesson."""
+        lesson = self.coordinator.next_lesson()
+        if lesson is None:
+            return None
+        return lesson.get("subject")
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return detailed info about the next lesson."""
+        lesson = self.coordinator.next_lesson()
+        if lesson is None:
+            return {}
+        return _lesson_to_attr(lesson)
+
+
+class SduiTodayLessonsSensor(CoordinatorEntity, SensorEntity):
+    """Sensor: number of lessons today."""
+
+    _attr_icon = "mdi:calendar-today"
+    _attr_native_unit_of_measurement = "lessons"
+
+    def __init__(self, coordinator: SduiCoordinator, entry: ConfigEntry) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_lessons_today"
+        self._attr_name = "Sdui Lessons Today"
+
+    @property
+    def native_value(self) -> int:
+        """Return count of today's lessons."""
+        return len(self.coordinator.today_lessons())
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return list of today's lessons."""
+        return {
+            "lessons": [_lesson_to_attr(l) for l in self.coordinator.today_lessons()]
+        }
+
+
+class SduiSubstitutionsSensor(CoordinatorEntity, SensorEntity):
+    """Sensor: substitutions and cancellations today."""
+
+    _attr_icon = "mdi:swap-horizontal"
+    _attr_native_unit_of_measurement = "changes"
+
+    def __init__(self, coordinator: SduiCoordinator, entry: ConfigEntry) -> None:
+        """Initialize."""
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_substitutions_today"
+        self._attr_name = "Sdui Substitutions Today"
+
+    @property
+    def native_value(self) -> int:
+        """Return count of substitutions/cancellations today."""
+        return len(self.coordinator.substitutions_today())
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return details of today's substitutions."""
+        return {
+            "substitutions": [
+                _lesson_to_attr(l) for l in self.coordinator.substitutions_today()
+            ]
         }
