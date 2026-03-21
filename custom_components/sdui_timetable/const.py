@@ -1,6 +1,6 @@
 """Constants for the Sdui integration."""
 
-DOMAIN = "sdui"
+DOMAIN = "sdui_timetable"
 API_BASE = "https://api.sdui.app/v1"
 SCAN_INTERVAL_MINUTES = 30
 

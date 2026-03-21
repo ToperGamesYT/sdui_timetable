@@ -26,11 +26,15 @@ class SduiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             token = user_input[CONF_TOKEN].strip()
+            user_id = user_input[CONF_USER_ID].strip()
             session = async_get_clientsession(self.hass)
-            client = SduiApiClient(token, session)
+            
+            # Create client with provided user_id
+            client = SduiApiClient(token, session, user_id=user_id)
 
             try:
-                user_id = await client.validate_token()
+                # Validate token works with this user_id
+                await client.validate_token()
             except SduiAuthError:
                 errors["base"] = "invalid_auth"
             except SduiApiError:
@@ -49,8 +53,14 @@ class SduiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_TOKEN): str}),
+            data_schema=vol.Schema({
+                vol.Required(CONF_TOKEN): str,
+                vol.Required(CONF_USER_ID, description={"suggested_value": ""}): str,
+            }),
             errors=errors,
+            description_placeholders={
+                "user_id_help": "Find your user_id in your SDUI timetable URL: https://sdui.app/timetable/users/YOUR_USER_ID"
+            },
         )
 
     @staticmethod
@@ -68,13 +78,14 @@ class SduiOptionsFlow(config_entries.OptionsFlow):
         self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
-        """Manage the options — allow updating the Bearer token."""
+        """Manage the options — allow updating the Bearer token and user_id."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             token = user_input[CONF_TOKEN].strip()
+            user_id = user_input[CONF_USER_ID].strip()
             session = async_get_clientsession(self.hass)
-            client = SduiApiClient(token, session)
+            client = SduiApiClient(token, session, user_id=user_id)
 
             try:
                 await client.validate_token()
@@ -85,7 +96,7 @@ class SduiOptionsFlow(config_entries.OptionsFlow):
             else:
                 self.hass.config_entries.async_update_entry(
                     self._config_entry,
-                    data={**self._config_entry.data, CONF_TOKEN: token},
+                    data={**self._config_entry.data, CONF_TOKEN: token, CONF_USER_ID: user_id},
                 )
                 return self.async_create_entry(title="", data={})
 
@@ -96,7 +107,11 @@ class SduiOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(
                         CONF_TOKEN,
                         default=self._config_entry.data.get(CONF_TOKEN, ""),
-                    ): str
+                    ): str,
+                    vol.Required(
+                        CONF_USER_ID,
+                        default=self._config_entry.data.get(CONF_USER_ID, ""),
+                    ): str,
                 }
             ),
             errors=errors,
