@@ -58,11 +58,12 @@ def extract_user_id_from_token(token: str) -> str:
 class SduiApiClient:
     """Async API client for sdui.app."""
 
-    def __init__(self, token: str, session: aiohttp.ClientSession) -> None:
+    def __init__(self, token: str, session: aiohttp.ClientSession, user_id: str | None = None) -> None:
         """Initialize the API client."""
         self._token = token
         self._session = session
-        self._user_id = extract_user_id_from_token(token)
+        # Use provided user_id or fall back to extracting from token (for backward compatibility)
+        self._user_id = user_id if user_id else extract_user_id_from_token(token)
 
     @property
     def user_id(self) -> str:

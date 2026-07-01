@@ -9,7 +9,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import SduiApiClient, SduiApiError, SduiAuthError
-from .const import CONF_TOKEN, DOMAIN, PLATFORM_CALENDAR, PLATFORM_SENSOR
+from .const import CONF_TOKEN, CONF_USER_ID, DOMAIN, PLATFORM_CALENDAR, PLATFORM_SENSOR
 from .coordinator import SduiCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,9 +20,10 @@ PLATFORMS = [PLATFORM_SENSOR, PLATFORM_CALENDAR]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Sdui from a config entry."""
     token = entry.data[CONF_TOKEN]
+    user_id = entry.data.get(CONF_USER_ID)  # Get user_id from config entry
     session = async_get_clientsession(hass)
 
-    client = SduiApiClient(token, session)
+    client = SduiApiClient(token, session, user_id=user_id)
     coordinator = SduiCoordinator(hass, client)
 
     try:
